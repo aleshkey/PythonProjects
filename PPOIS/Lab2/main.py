@@ -11,11 +11,25 @@ from kivy.uix.widget import Widget
 from kivy.core.window import Window
 
 from Lab2.src.DAO.PetDAO import PetDAO
+from Lab2.src.checkers.Checker import Checker
+from Lab2.src.erorrs.DateIsNotValid import DateIsNotValid
 from Lab2.src.models.pet import Pet
 
 SIZE = {'width': 1100, 'height': 550}
 
 Window.size = (SIZE.get('width'), SIZE.get('height'))
+
+
+class ErrorPopup(Popup):
+
+    def open(self, text, *_args, **kwargs):
+        label = Label(size_hint=(1, 0.9))
+        label.text = text
+        bl = BoxLayout(orientation='vertical', size=(SIZE.get('width'), SIZE.get('height')))
+        self.add_widget(bl)
+        bl.add_widget(label)
+        bl.add_widget(Button(text="cancel", size_hint=(1, 0.1), on_press=self.dismiss))
+        super().open(*_args, **kwargs)
 
 
 class MyWidget(GridLayout):
@@ -151,13 +165,16 @@ class MyApp(App):
         bl.add_widget(Button(text='cancel', on_press=popup.dismiss))
         popup.open()
 
-    def try_search(self, lst:list, tis: list, instance):
-        if lst[0] == 'name':
-            self.open_result(petDAO.combining(petDAO.find_by_name(tis[0].text), petDAO.find_by_birth_date(tis[1].text)))
-        if lst[0] == 'date of last admission':
-            self.open_result(petDAO.combining(petDAO.find_by_veterinarians_name(tis[1]), petDAO.find_by_date_of_last_admission(tis[0].text)))
-        if len(lst) == 1:
-            self.open_result(petDAO.find_by_part_or_diagnosis(tis[0].text))
+    def try_search(self, lst: list, tis: list, instance):
+        try:
+            if lst[0] == 'name':
+                self.open_result(petDAO.combining(petDAO.find_by_name(tis[0].text), petDAO.find_by_birth_date(tis[1].text)))
+            if lst[0] == 'date of last admission':
+                self.open_result(petDAO.combining(petDAO.find_by_veterinarians_name(tis[1]), petDAO.find_by_date_of_last_admission(tis[0].text)))
+            if len(lst) == 1:
+                self.open_result(petDAO.find_by_part_or_diagnosis(tis[0].text))
+        except DateIsNotValid as e:
+             ErrorPopup().open(str(e))
 
     def open_result(self, lst):
         popup = Popup(title='result', size=(SIZE.get('width'), SIZE.get('height')))
@@ -204,10 +221,13 @@ class MyApp(App):
         pet.date_of_last_admission = add_popup.children[4].text
         pet.veterinarians_name = add_popup.children[3].text
         pet.diagnosis = add_popup.children[2].text
-        petDAO.add(pet)
-        self.__page_counter = 0
-        self.print_info()
-        popup.dismiss()
+        if not Checker.date_is_valid(pet.birth_date) or not Checker.date_is_valid(pet.date_of_last_admission):
+            ErrorPopup().open("invalid date")
+        else:
+                petDAO.add(pet)
+                self.__page_counter = 0
+                self.print_info()
+                popup.dismiss()
 
     def open_file(self, instance):
         popup = Popup(title='choose file')
@@ -241,6 +261,7 @@ class MyApp(App):
         main_layout.add_widget(bl)
         main_layout.add_widget(main_buttons)
         return main_layout
+
 
 if __name__ == "__main__":
     petDAO = PetDAO()

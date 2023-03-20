@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
 
+from Lab2.src.checkers.Checker import Checker
+from Lab2.src.erorrs.DateIsNotValid import DateIsNotValid
 from Lab2.src.models.pet import Pet
 
 
@@ -48,10 +50,16 @@ class PetDAO:
         return [x for x in self.read() if x.name == name]
 
     def find_by_birth_date(self, birth_date):
-        return [x for x in self.read() if x.birth_date == birth_date]
+        if Checker.date_is_valid(birth_date):
+            return [x for x in self.read() if x.birth_date == birth_date]
+        else:
+            raise DateIsNotValid("correct input dd.mm.yyyy")
 
     def find_by_date_of_last_admission(self, date_of_last_admission):
-        return [x for x in self.read() if x.date_of_last_admission == date_of_last_admission]
+        if Checker.date_is_valid(date_of_last_admission):
+            return [x for x in self.read() if x.date_of_last_admission == date_of_last_admission]
+        else:
+            raise DateIsNotValid("correct input dd.mm.yyyy")
 
     def find_by_veterinarians_name(self, veterinarians_name):
         return [x for x in self.read() if x.veterinarians_name == veterinarians_name]
