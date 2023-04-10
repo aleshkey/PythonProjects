@@ -8,8 +8,8 @@ from model.Сhicken import Chicken
 
 class Game:
 
-    __CREATION_TIME = 2000
-    __speed = 10
+    __CREATION_TIME = 500
+    __speed = 5
     __JSON_FILE = "config/cfg.json"
     __DISPLAY_WIDTH = 1920
     __CLOCK = pygame.time.Clock()
@@ -20,9 +20,12 @@ class Game:
     __DEFAULT_SIZE = [77, 70]
     __CHICKENS = []
 
+    __IMAGE_HEIGHT = 422
+
     def read_json(self):
         with open(self.__JSON_FILE) as json_file:
-            cfg = json.load(json_file)
+            line = json_file.readline()
+            cfg = json.loads(line)
         return cfg
 
     def write_json(self):
@@ -39,7 +42,6 @@ class Game:
         pygame.init()
         self.screen = pygame.display.set_mode((self.__DISPLAY_WIDTH, self.__DISPLAY_HEIGHT))
         self.cfg = self.read_json()
-        self.cfg['high_score'][0]['name'] = "Lesha"
         pygame.display.set_caption("Moorhuhn")
         pygame.display.set_icon(pygame.image.load('images/logo/logo.png').convert_alpha())
         self.bg = pygame.image.load(self.cfg['background_image']).convert_alpha()
@@ -49,10 +51,8 @@ class Game:
         self.cursor_img = pygame.image.load('images/cursor/cursor.png')
         self.cursor_img_rect = self.cursor_img.get_rect()
         pygame.font.init()
-        self.my_font = pygame.font.SysFont('Comic Sans MS', 30)
+        self.my_font = pygame.font.SysFont('Comic Sans MS', 40)
         self.score = 0
-
-
 
     def get_chicken_image(self, chicken: Chicken):
         image = pygame.transform.scale(pygame.image.load(chicken.get_image()),
@@ -96,18 +96,20 @@ class Game:
          timer = 0
          while self.__IS_RUNNING:
             self.screen.blit(self.sky, (0, 0))
-            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - 457))
+            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - self.__IMAGE_HEIGHT))
             self.print_all_targets()
 
             self.cursor_img_rect.center = pygame.mouse.get_pos()  # update position
             self.screen.blit(self.cursor_img, self.cursor_img_rect)
             text_surface = self.my_font.render(str(self.score), False, (255, 255, 255))
             self.screen.blit(text_surface, (self.__DISPLAY_WIDTH/2, 20))
-            if timer/10 < 10:
+            if timer/50 < 25:
                 timer += 1
             else:
+                self.__CHICKENS_RECT.clear()
+                self.__CHICKENS.clear()
                 self.print_result()
-            text = self.my_font.render(f"Time: {timer/10}", True, (255, 255, 255))
+            text = self.my_font.render(f"Time: {timer/50}", True, (255, 255, 255))
             self.screen.blit(text, (10, 10))
             pygame.display.update()
             for event in pygame.event.get():
@@ -118,28 +120,73 @@ class Game:
                 if event.type == self.__CHICKEN_TIMER:
                     self.create_chicken()
 
-            self.__CLOCK.tick(10)
+            self.__CLOCK.tick(50)
             pygame.time.delay(1)
 
     def print_menu(self):
         while self.__IS_RUNNING:
             self.screen.blit(self.sky, (0, 0))
-            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - 457))
+            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - self.__IMAGE_HEIGHT))
             start_text = self.my_font.render('start', False, (255, 255, 255))
             settings_text = self.my_font.render('settings', False, (255, 255, 255))
             score_text = self.my_font.render('high score', False, (255, 255, 255))
-            start_text_rect = start_text.get_rect(topleft=(self.__DISPLAY_WIDTH/3-200, 20))
-            settings_text_rect = settings_text.get_rect(topleft=(self.__DISPLAY_WIDTH/3*2-250, 20))
-            score_text_rect = score_text.get_rect(topleft=(self.__DISPLAY_WIDTH-200, 20))
+            start_text_rect = start_text.get_rect(topleft=(self.__DISPLAY_WIDTH/3-300, 20))
+            settings_text_rect = settings_text.get_rect(topleft=(self.__DISPLAY_WIDTH/3*2-350, 20))
+            score_text_rect = score_text.get_rect(topleft=(self.__DISPLAY_WIDTH-300, 20))
             self.screen.blit(start_text, start_text_rect)
             self.screen.blit(settings_text, settings_text_rect)
             self.screen.blit(score_text, score_text_rect)
             if self.is_pressed(start_text_rect):
                 self.run()
             elif self.is_pressed(settings_text_rect):
-                pass
+                self.print_settings()
             elif self.is_pressed(score_text_rect):
-                pass
+                self.print_high_score()
+            self.cursor_img_rect.center = pygame.mouse.get_pos()
+            self.screen.blit(self.cursor_img, self.cursor_img_rect)
+
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.write_json()
+                    self.__IS_RUNNING = False
+                    pygame.quit()
+
+    def print_settings(self):
+        while self.__IS_RUNNING:
+            self.screen.blit(self.sky, (0, 0))
+            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - self.__IMAGE_HEIGHT))
+            colors = []
+            for i in range(3):
+                if i == self.cfg['difficulty_level']-1:
+                    colors.append((255, 10, 10))
+                else:
+                    colors.append((255, 255, 255))
+            difficulty_level_text = self.my_font.render('difficulty level: ', False, (255, 255, 255))
+            easy_text = self.my_font.render('easy', False, colors[0])
+            med_text = self.my_font.render('med', False, colors[1])
+            hard_text = self.my_font.render('hard', False, colors[2])
+            back_text = self.my_font.render('back', False, (255, 255, 255))
+
+            back_text_rect = back_text.get_rect(topleft=(self.__DISPLAY_WIDTH/6-20, self.__DISPLAY_HEIGHT-100))
+            difficulty_level_text_rect = difficulty_level_text.get_rect(topleft=(self.__DISPLAY_WIDTH/6-20, 20))
+            easy_text_rect = easy_text.get_rect(topleft=(self.__DISPLAY_WIDTH/6+300, 20))
+            med_text_rect = med_text.get_rect(topleft=(self.__DISPLAY_WIDTH/6+600, 20))
+            hard_text_rect = hard_text.get_rect(topleft=(self.__DISPLAY_WIDTH/6+900, 20))
+            self.screen.blit(difficulty_level_text, difficulty_level_text_rect)
+            self.screen.blit(easy_text, easy_text_rect)
+            self.screen.blit(med_text, med_text_rect)
+            self.screen.blit(hard_text, hard_text_rect)
+            self.screen.blit(back_text, back_text_rect)
+            if self.is_pressed(easy_text_rect):
+                self.cfg['difficulty_level'] = 1
+            elif self.is_pressed(med_text_rect):
+                self.cfg['difficulty_level'] = 2
+            elif self.is_pressed(hard_text_rect):
+                self.cfg['difficulty_level'] = 3
+            elif self.is_pressed(back_text_rect):
+                self.write_json()
+                self.print_menu()
             self.cursor_img_rect.center = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_img, self.cursor_img_rect)
 
@@ -153,7 +200,7 @@ class Game:
     def print_result(self):
         while self.__IS_RUNNING:
             self.screen.blit(self.sky, (0, 0))
-            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - 457))
+            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - self.__IMAGE_HEIGHT))
             res_text = self.my_font.render(str(self.score), False, (255, 255, 255))
             ok_text = self.my_font.render('ok', False, (255, 255, 255))
             res_text_rect = res_text.get_rect(topleft=(self.__DISPLAY_WIDTH/2, 20))
@@ -161,6 +208,8 @@ class Game:
             self.screen.blit(res_text, res_text_rect)
             self.screen.blit(ok_text, ok_text_rect)
             if self.is_pressed(ok_text_rect):
+                self.update_high_score(self.score)
+                self.score = 0
                 self.print_menu()
             self.cursor_img_rect.center = pygame.mouse.get_pos()
             self.screen.blit(self.cursor_img, self.cursor_img_rect)
@@ -172,3 +221,48 @@ class Game:
                     self.__IS_RUNNING = False
                     pygame.quit()
 
+    def update_high_score(self, score):
+        high_score = sorted(self.cfg['high_score'])
+        for el in reversed(high_score):
+            if el < score:
+                high_score.insert(high_score.index(el)+1, score)
+                break
+        
+        for i in range(3):
+            j = -1-i
+            self.cfg['high_score'][j] = high_score[j]
+        self.write_json()
+
+    def print_high_score(self):
+        while self.__IS_RUNNING:
+            self.screen.blit(self.sky, (0, 0))
+            self.screen.blit(self.bg, (0, self.__DISPLAY_HEIGHT - self.__IMAGE_HEIGHT))
+            first_place_text = self.my_font.render(str(self.cfg['high_score'][2]), False, (255, 255, 255))
+            second_place_text = self.my_font.render(str(self.cfg['high_score'][1]), False, (255, 255, 255))
+            third_place_text = self.my_font.render(str(self.cfg['high_score'][0]), False, (255, 255, 255))
+            high_score_text = self.my_font.render('HIGH SCORE', False, (255, 255, 255))
+            back_text = self.my_font.render('back', False, (255, 255, 255))
+            high_score_text_rect = high_score_text.get_rect(topleft=(self.__DISPLAY_WIDTH/20-50, 20))
+            first_place_text_rect = first_place_text.get_rect(topleft=(self.__DISPLAY_WIDTH/20-50, 50))
+            second_place_text_rect = second_place_text.get_rect(topleft=(self.__DISPLAY_WIDTH/20-50, 80))
+            third_place_text_rect = third_place_text.get_rect(topleft=(self.__DISPLAY_WIDTH/20-50, 120))
+            back_text_rect = back_text.get_rect(topleft=(self.__DISPLAY_WIDTH / 6 - 20, self.__DISPLAY_HEIGHT - 100))
+
+            self.screen.blit(high_score_text, high_score_text_rect)
+            self.screen.blit(first_place_text, first_place_text_rect)
+            self.screen.blit(second_place_text, second_place_text_rect)
+            self.screen.blit(third_place_text, third_place_text_rect)
+            self.screen.blit(back_text, back_text_rect)
+
+            if self.is_pressed(back_text_rect):
+                self.write_json()
+                self.print_menu()
+            self.cursor_img_rect.center = pygame.mouse.get_pos()
+            self.screen.blit(self.cursor_img, self.cursor_img_rect)
+
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.write_json()
+                    self.__IS_RUNNING = False
+                    pygame.quit()
